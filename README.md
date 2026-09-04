@@ -1,69 +1,114 @@
-# Crustdata
+# Crustdata Skills
 
-Cursor plugin that connects agents to [Crustdata](https://crustdata.com) through Crustdata's official hosted [Model Context Protocol](https://modelcontextprotocol.io/) server.
+Open-source skills for [Claude.ai](https://claude.ai), [Claude Desktop](https://claude.ai/download), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [OpenAI Codex](https://developers.openai.com/codex), and [Grok Build](https://docs.x.ai/build), powered by [Crustdata](https://crustdata.com)'s real-time B2B data APIs. Each skill is a ready-to-use AI workflow for sales, recruiting, and growth tasks. No coding required.
 
-Search and enrich 800M+ people and 200M+ companies with live B2B data: people and company search, firmographic enrichment, contact data, job listings, and social posts, straight from the signed-in Crustdata account.
+## Skills
 
-## Install
+| Skill | What it does |
+|-------|-------------|
+| [Email Enrichment](./skills/email-enrichment/) | Find verified emails for a list of people, or identify the person behind an email |
+| [Candidate Sourcing](./skills/candidate-sourcing/) | Find engineers for an open role and draft the outreach to each one |
+| [Sales Prospecting](./skills/sales-prospecting/) | Build a list of companies worth selling to, and rank the ones you already have |
+| [Account Research](./skills/account-research/) | Learn how a company works before you call it: who runs it, what they run on |
+| [ICP Builder](./skills/icp-builder/) | Turn one LinkedIn URL into the customer profile every other skill reads |
+| [Warm-Path Deal Workspace](./skills/warm-path-workspace/) | See who decides at an account, and who on your team can introduce you |
+| [Meeting Prep](./skills/meeting-prep/) | Walk into today's calls knowing who you're talking to |
+| [Sales Outreach](./skills/sales-outreach/) | Write the cold email, opening on something the person actually did |
 
-1. Open **Cursor Settings → Plugins**.
-2. Search for **Crustdata**.
-3. Click **Install**, then complete the Crustdata sign-in prompt.
+*More skills coming soon.*
 
-Or run `/add-plugin crustdata` in chat.
+---
 
-## MCP
+## Getting started
+
+Install the plugin. It carries the Crustdata connector (800M+ profiles, 200M+ companies) and every skill in the table above, so there is nothing else to set up.
+
+### Claude.ai, Claude Desktop, or Cowork
+
+1. Open **Customize** in the left sidebar, then the **Plugins** tab
+2. Click **Add**, then **Add marketplace**
+3. Enter the repository `crustdata/skills`
+4. Install the **Crustdata** plugin ([step-by-step guide](https://support.claude.com/en/articles/13837440-use-plugins-in-claude))
+
+### Claude Code
+
+```bash
+claude plugin marketplace add crustdata/skills
+claude plugin install crustdata@crustdata-plugin
+```
+
+### Codex
+
+```bash
+codex plugin marketplace add crustdata/skills
+codex plugin add crustdata@crustdata-plugin
+```
+
+Then start a new thread: Codex picks up a plugin's skills and tools at session start. Needs Codex 0.152 or newer. `/plugins` lists what is installed and `/skills` the skills it found; each one is also callable directly as `$crustdata:sales-prospecting`.
+
+### Grok Build
+
+Not in the xAI plugin catalog yet, and Grok has no documented way to add a marketplace of
+its own, so there is no install today. Add the connector on its own — see
+[Just the data, without the skills](#just-the-data-without-the-skills) — and copy any skill
+folder from `skills/` into `.grok/skills/`.
+
+### Cursor
+
+Not on the Cursor Marketplace yet, so there is no one-click install. Add the connector on its own — see [Just the data, without the skills](#just-the-data-without-the-skills) below — and copy any skill folder you want from `skills/` into `.cursor/skills/` in your project. Cursor reads `SKILL.md` from there natively.
+
+The plugin is pure Node with no native dependencies, and runs the same on macOS, Linux, Windows, and WSL. It needs Node 22 or newer on your `PATH`.
+
+### Signing in
+
+The first time the agent uses a Crustdata tool it asks you to connect. Your browser opens, you sign in, and the connection is reused every session after. There's no API key to paste. In Codex, `codex mcp login crustdata` starts the same sign-in on demand.
+
+### Just the data, without the skills
+
+Inside Claude, add Crustdata as a connector instead: **Customize > Connectors > Add custom connector**, then paste `https://install.crustdata.com/mcp`.
+
+The same endpoint works from your own code, for agent frameworks and backend jobs where a browser sign-in isn't practical. Point any MCP client at it and pass your API key as a bearer token:
 
 ```json
 {
   "mcpServers": {
     "crustdata": {
-      "type": "http",
-      "url": "https://install.crustdata.com/mcp"
+      "type": "streamable-http",
+      "url": "https://install.crustdata.com/mcp",
+      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
     }
   }
 }
 ```
 
-Auth is OAuth against Crustdata. Cursor opens a Crustdata sign-in window the first time the plugin connects. There is no API key to configure.
+Full reference in the [MCP docs](https://docs.crustdata.com/for-agents/mcp).
 
-## How it works
+---
 
-The server is Code Mode: it exposes three tools — `list_tools`, `get_schema`, and `execute` — and the agent reaches every data operation by writing a short JavaScript script for `execute` that calls `callTool('person_search', …)`, `callTool('company_enrich', …)`, and so on. `list_tools` carries the full annotated tool list with per-tool pricing; `get_schema` returns filterable columns and response shapes before any credits are spent.
+## Structure
 
-## Before you connect
+```
+.claude-plugin/   plugin and marketplace manifests, for Claude
+.codex-plugin/    plugin manifest, for Codex
+.cursor-plugin/   plugin manifest, for Cursor
+.grok-plugin/     plugin manifest, for Grok Build
+.agents/plugins/  marketplace catalog, for Codex
+.mcp.json         the Crustdata connector (Claude, Codex)
+.cursor-mcp.json  the Crustdata connector (Cursor)
+plugin.meta.json  the source every manifest above is generated from
+assets/           logo and icons
+rules/            Cursor rules
+skills/           one folder per skill above
+hooks/            session hook, syncs your skills at startup
+tests/            plugin tests
+```
 
-You need a Crustdata account with API credits. Most tools bill per result; company identification and the autocomplete tools are free. Agents can check the balance with the free `account_credits` tool, and every tool call's result reports the exact `credits_used`.
-
-## What agents can do
-
-| Category | Capabilities |
-| --- | --- |
-| People | Search 800M+ profiles by company, title, seniority, and region (`person_search`); enrich full profiles (`person_enrich`) |
-| Companies | Identify by name or domain for free (`company_identify`), enrich firmographics, headcount, funding, and technographics (`company_enrich`) |
-| Contacts | Emails and phone numbers via `person_contact_enrich`, billed per contact type returned |
-| Jobs | Search job listings with filters and aggregations (`job_search`), or live-scrape a company's openings (`job_search_live`) |
-| Social | Pull LinkedIn posts by person, company, or keyword (`social_post_list_live`, `social_post_search_live`) |
-| Web | Live web/news search and page fetch (`web_search_live`, `web_enrich_live`) |
-| Alerts | Watchers on people, companies, and jobs (`watch_create`, `watch_discovery_create`) |
-
-The hosted runtime is the source of truth for tool names and schemas.
-
-## Included
-
-- `rules/crustdata-tool-selection.mdc`: how to drive the Code Mode server and which tool to reach for
-- `skills/`: Crustdata's public skills catalog — the same skills published at [crustdata/skills](https://github.com/crustdata/skills) — covering prospecting, account research, outreach, meeting prep, candidate sourcing, and email enrichment
-
-## Notes
-
-- Tool calls run as the Crustdata user who authorizes the connection and draw from that account's credit balance.
-- Indexed DB search tools bill cheaply per result (~0.03 credits); the bundled rule steers agents to them before the live variants (2 credits/result).
-
-## Docs
-
-- API docs: https://docs.crustdata.com
-- Server URL: https://install.crustdata.com/mcp
+One bundle serves all three clients: the connector, the skills and every manifest ship together and always carry the same version.
 
 ## License
 
-MIT
+MIT. See [LICENSE](./LICENSE).
+
+---
+
+Built on [Crustdata](https://crustdata.com), the public data layer for AI and humans.
